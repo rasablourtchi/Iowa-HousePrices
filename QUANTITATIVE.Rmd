@@ -1,0 +1,66 @@
+---
+title: "GSB 544 FINAL QUANTITATIVE"
+author: "Rasa Blourtchi"
+date: "2022-12-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(Boruta)
+library(caret)
+library(tidyverse)
+library(xgboost)
+library(caTools)
+library(dplyr)
+#library(cvms)
+library(caret)
+
+training_data <- read_csv("FInal Exam/gsb-544-fall-2022-houses/train_new.csv")
+
+```
+
+
+
+```{r}
+training_data = training_data[, -3]
+training_data <- na.omit(training_data)
+splits = createDataPartition(training_data$SalePrice, p = .8, list = F)
+train = training_data[splits, ]
+test = training_data[-splits, ]
+xtrain = data.matrix(train[, -1])
+ytrain = train$SalePrice
+xtest = data.matrix(test[, -1])
+ytest = test$SalePrice
+xtraingb = xgb.DMatrix(data = xtrain, label = train$PID)
+xgb_test = xgb.DMatrix(data = xtest, label = test$PID)
+list_to_watch = list(train=xtraingb, test=xgb_test)
+model = xgb.train(data = xtraingb, max.depth = 3, list_to_watch=list_to_watch, nrounds = 70)
+final = xgboost(data = xtraingb, max.depth = 3, nrounds = 56, verbose = 0)
+pred = predict(final,xgb_test) 
+sqrt(mean((test$SalePrice - pred)^2))
+```
+
+
+```{r}
+test <- read_csv("FInal Exam/gsb-544-fall-2022-houses/test_new.csv")
+xtrain = data.matrix(training_data[, -1])
+ytrain = training_data$SalePrice
+xtraingb = xgb.DMatrix(data = xtrain, label = ytrain)
+list_to_watch = list(train=xtraingb, test=xgb_test)
+model = xgb.train(data = xtraingb, max.depth = 3, list_to_watch=list_to_watch, nrounds = 70)
+final = xgboost(data = xtraingb, max.depth = 3, nrounds = 56, verbose = 0)
+pid = test$PID
+test = test[, -2]
+xtest = data.matrix(test)
+ytest = test$SalePrice 
+xgb_test = xgb.DMatrix(data = xtest, label = pid)
+pred = predict(final,xgb_test)
+submission <- data.frame(PID  = pid, SalePrice = pred)
+submission %>% write_csv("regression_final_output2.csv")
+```
+
